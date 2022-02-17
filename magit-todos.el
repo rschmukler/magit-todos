@@ -562,7 +562,7 @@ Match items are a list of `magit-todos-item' found in PROCESS's buffer for RESUL
         (forward-line 1)))
     (nreverse items)))
 
-(cl-defun magit-todos--git-diff-callback (&key magit-status-buffer results-regexp search-regexp-elisp process heading
+(cl-defun magit-todos--git-diff-callback (&key magit-status-buffer results-regexp search-regexp-elisp process
                                                exclude-globs &allow-other-keys)
   "Callback for git diff scanner output."
   ;; NOTE: Doesn't handle newlines in filenames or diff.mnemonicPrefix.
@@ -607,8 +607,7 @@ Match items are a list of `magit-todos-item' found in PROCESS's buffer for RESUL
                                         (magit-todos--line-item results-regexp filename))))
                       (push item items)))
                   (cl-incf line-number))))))
-        (let ((magit-todos-section-heading heading))
-          (magit-todos--insert-items magit-status-buffer items :branch-p t))))))
+        (magit-todos--insert-items magit-status-buffer items :branch-p t)))))
 
 (defun magit-todos--delete-section (condition)
   "Delete the section specified by CONDITION from the Magit status buffer.
@@ -654,7 +653,7 @@ Assumes current buffer is ITEM's buffer."
 
 (defun magit-todos--insert-todos ()
   "Insert to-do items into current buffer.
-This function should be called from inside a ‘magit-status’ buffer."
+This function should be called from inside a 'magit-status' buffer."
   (declare (indent defun))
   (when magit-todos-active-scan
     ;; Avoid running multiple scans for a single magit-status buffer.
@@ -750,12 +749,18 @@ If BRANCH-P is non-nil, do not update `magit-todos-item-cache',
                   ;; Manual updates: Insert section to remind user
                   (let ((magit-insert-section--parent magit-root-section))
                     (magit-insert-section (todos)
-                      (magit-insert-heading (concat (propertize magit-todos-section-heading 'face 'magit-section-heading)
+                      (magit-insert-heading (concat (propertize magit-todos-section-heading 'font-lock-face 'magit-section-heading)
                                                     " (0)" reminder "\n")))))
               (let ((section (magit-todos--insert-groups :type 'todos
-                               :heading (format "%s (%s)%s"
-                                                (propertize magit-todos-section-heading 'face 'magit-section-heading)
-                                                num-items reminder)
+                               :heading
+                               (format
+                                "%s (%s)%s"
+                                (if (not branch-p)
+                                    (propertize magit-todos-section-heading 'font-lock-face 'magit-section-heading)
+                                  (format "%s (branched from %s)"
+                                          (propertize magit-todos-section-heading 'font-lock-face 'magit-section-heading)
+                                          (propertize magit-todos-branch-list-merge-base-ref 'font-lock-face 'magit-branch-remote)))
+                                num-items reminder)
                                :group-fns group-fns
                                :items items
                                :depth 0)))
@@ -782,7 +787,7 @@ sections."
   ;; NOTE: `magit-insert-section' seems to bind `magit-section-visibility-cache' to nil, so setting
   ;; visibility within calls to it probably won't work as intended.
   (declare (indent defun))
-  (let* ((indent (propertize (s-repeat (* 2 depth) " ") 'face nil))
+  (let* ((indent (propertize (s-repeat (* 2 depth) " ") 'font-lock-face nil))
          (heading (concat indent heading))
          (magit-insert-section--parent (if (= 0 depth)
                                            magit-root-section
@@ -815,7 +820,7 @@ sections."
                                         :heading (concat
                                                   (if (and magit-todos-fontify-keyword-headers
                                                            (member group-name magit-todos-keywords-list))
-                                                      (propertize group-name 'face (magit-todos--keyword-face group-name))
+                                                      (propertize group-name 'font-lock-face (magit-todos--keyword-face group-name))
                                                     group-name)
                                                   ;; Item count
                                                   (if (= 1 (length group-fns))
@@ -844,7 +849,7 @@ sections."
   ;; NOTE: `magit-insert-section' seems to bind `magit-section-visibility-cache' to nil, so setting
   ;; visibility within calls to it probably won't work as intended.
   (declare (indent defun))
-  (let* ((indent (propertize (s-repeat (* 2 depth) " ") 'face nil))
+  (let* ((indent (propertize (s-repeat (* 2 depth) " ") 'font-lock-face nil))
          (magit-insert-section--parent (if (= 0 depth)
                                            magit-root-section
                                          magit-insert-section--parent))
@@ -852,7 +857,7 @@ sections."
          (section (magit-insert-section ((eval type))
                     (magit-insert-heading heading)
                     (dolist (item items)
-                      (let* ((filename (propertize (magit-todos-item-filename item) 'face 'magit-filename))
+                      (let* ((filename (propertize (magit-todos-item-filename item) 'font-lock-face 'magit-filename))
                              (string (--> (concat indent
                                                   (when magit-todos-show-filenames
                                                     (concat filename " "))
@@ -1038,7 +1043,7 @@ if the process's buffer has already been deleted."
   "Return ITEM formatted as from a non-Org file."
   (format "%s%s %s"
           (propertize (magit-todos-item-keyword item)
-                      'face (magit-todos--keyword-face (magit-todos-item-keyword item)))
+                      'font-lock-face (magit-todos--keyword-face (magit-todos-item-keyword item)))
           (or (magit-todos-item-suffix item) "")
           (or (magit-todos-item-description item) "")))
 
